@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// SyncTower is an 1:M non-blocking value-loadable channel.
+// SyncTower is an 1:M blocking channel publisher.
 //
 // Each subscriber gets their own private channel, and it
 // will get a copy of whatever is sent to SyncTower.
@@ -20,12 +20,15 @@ type SyncTower struct {
 	mu          sync.Mutex
 }
 
+// NewSyncTower makes a new SyncTower.
 func NewSyncTower() *SyncTower {
 	return &SyncTower{
 		subscribers: make(map[string]chan interface{}),
 	}
 }
 
+// Subscribe returns a new channel that will receive
+// all Broadcast values.
 func (b *SyncTower) Subscribe(name string) chan interface{} {
 	b.mu.Lock()
 	ch := make(chan interface{}, 1)
@@ -35,6 +38,7 @@ func (b *SyncTower) Subscribe(name string) chan interface{} {
 	return ch
 }
 
+// Unsub will unsubscribe the subscriber named.
 func (b *SyncTower) Unsub(name string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()

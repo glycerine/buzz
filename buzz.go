@@ -46,12 +46,15 @@ type AsyncTower struct {
 	mu          sync.Mutex
 }
 
+// NewAsyncTower makes a new AsyncTower.
 func NewAsyncTower() *AsyncTower {
 	return &AsyncTower{
 		subscribers: make(map[string]chan interface{}),
 	}
 }
 
+// Subscribe returns a new channel that will receive
+// all Broadcast values.
 func (b *AsyncTower) Subscribe(name string) chan interface{} {
 	b.mu.Lock()
 	ch := make(chan interface{}, 1)
@@ -61,6 +64,7 @@ func (b *AsyncTower) Subscribe(name string) chan interface{} {
 	return ch
 }
 
+// Unsub will unsubscribe the subscriber named.
 func (b *AsyncTower) Unsub(name string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
