@@ -7,7 +7,7 @@ It is a channel compatible replacement for sync.Cond values.
 
 Each sender will receive exactly one copy of the broadcast value. 
 
-A buzz.Tower is a re-usable alternative to closing channels.
+A `buzz.Tower` is a re-usable alternative to closing channels.
 Closing channels is convenient, but you have to allocate
 a new channel every time you want to broadcast.
 
