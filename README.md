@@ -70,7 +70,7 @@ BenchmarkSyncTowerToTower-4    	 2000000	       751 ns/op	  10.65 MB/s
 BenchmarkAsyncTowerToTower-4   	 2000000	       764 ns/op	  10.47 MB/s
 ~~~
 
-In these benchmarks, the channel based Towers are about half the speed of a cond.Sync.
+In these benchmarks, the channel based Towers are about 50-60% of the speed of a cond.Sync.
 
 # author
 

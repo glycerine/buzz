@@ -38,7 +38,7 @@ func BenchmarkCondToCond(b *testing.B) {
 	b.ResetTimer()
 	b.StartTimer()
 
-	// produce odd integers
+	// consume even, produce odd integers
 	for i := 0; i < b.N; i++ {
 		cond.L.Lock()
 		for val%2 == 1 {
@@ -91,7 +91,7 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 	b.ResetTimer()
 	b.StartTimer()
 
-	// consume evens, produce odd integers
+	// consume even, produce odd integers
 	val = 1
 	oddTower.Broadcast(val)
 	for i := 0; i < b.N; i++ {
@@ -142,7 +142,7 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 	b.ResetTimer()
 	b.StartTimer()
 
-	// consume evens, produce odd integers
+	// consume even, produce odd integers
 	val = 1
 	oddTower.Broadcast(val)
 	for i := 0; i < b.N; i++ {
