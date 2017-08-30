@@ -14,7 +14,8 @@ a new channel every time you want to broadcast.
 Each subscriber is allocated a buffered channel of size 1.
 
 Broadcast and Signal sends are asynchronous, and these methods
-never block.
+never block. They simply put a single value into the buffered
+channel of each subscriber.
 
 Upon broadcasting a new value, any old unconsumed values sitting
 leftover in the receiver's channel buffers are purged first.
