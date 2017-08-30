@@ -50,14 +50,16 @@ func (b *SyncTower) Subscribe(name string) chan int {
 // stored internally.
 //
 func (b *SyncTower) Broadcast(val int) (err error) {
-	defer func() {
-		r := recover()
-		if r != nil {
-			// send on closed channel
-			//fmt.Printf("Broadcast recovered from '%#v'\n", r)
-			err = ErrClosed
-		}
-	}()
+	/*
+		defer func() {
+			r := recover()
+			if r != nil {
+				// send on closed channel
+				//fmt.Printf("Broadcast recovered from '%#v'\n", r)
+				err = ErrClosed
+			}
+		}()
+	*/
 	b.sub <- val
 	return nil
 }

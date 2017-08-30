@@ -258,6 +258,8 @@ provacative go blog title: Unintuitive Go: why you should send on closed channel
 
 with the defer recover OUTSIDE of the tight send loop, we actually
 get better performance with channels
+
+but sync had the recover on the inner loop on these two
 BenchmarkCondToCond-4          	 3000000	       461 ns/op	  17.33 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       415 ns/op	  19.24 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       559 ns/op	  14.29 MB/s
@@ -266,5 +268,13 @@ BenchmarkCondToCond-4          	 3000000	       467 ns/op	  17.09 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       422 ns/op	  18.94 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       577 ns/op	  13.86 MB/s
 
+async AND sync outer looped:
+BenchmarkCondToCond-4          	 3000000	       455 ns/op	  17.56 MB/s
+BenchmarkAsyncTowerToTower-4   	 5000000	       422 ns/op	  18.92 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       424 ns/op	  18.84 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       448 ns/op	  17.85 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       425 ns/op	  18.78 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       419 ns/op	  19.07 MB/s
 
 */
