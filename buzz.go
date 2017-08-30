@@ -23,6 +23,8 @@
 package buzz
 
 import (
+	"fmt"
+	"math/rand"
 	"sync"
 )
 
@@ -32,9 +34,8 @@ import (
 // will get a copy of whatever is sent to Broadcaster.
 type Broadcaster struct {
 	subscribers map[string]chan interface{}
+	names       []string
 	mu          sync.Mutex
-	on          bool
-	cur         interface{}
 }
 
 func New() *Broadcaster {
@@ -47,35 +48,86 @@ func (b *Broadcaster) Subscribe(name string) chan interface{} {
 	b.mu.Lock()
 	ch := make(chan interface{}, 1)
 	b.subscribers[name] = ch
+	b.names = append(b.names, name)
 	b.mu.Unlock()
 	return ch
 }
 
-func (b *Broadcaster) Unsub(name string) {
+func (b *Broadcaster) Unsub(name string) error {
 	b.mu.Lock()
+	defer b.mu.Unlock()
 	delete(b.subscribers, name)
-	b.mu.Unlock()
+
+	// names is separate, also needs updating
+	k := -1
+	for i := range b.names {
+		if b.names[i] == name {
+			k = i
+			break
+		}
+	}
+	if k == -1 {
+		return fmt.Errorf("name not subscribed: '%s'", name)
+	}
+	// delete names[k] from the middle of names
+	n := len(b.names)
+	switch {
+	case k == 0:
+		if n == 1 {
+			b.names = nil
+		} else {
+			b.names = b.names[1:]
+		}
+
+	case k < n-1: // k >= 1 and n >= 2
+		b.names = append(b.names[:k], b.names[(k+1):]...)
+
+	case k == n-1:
+		b.names = b.names[:(n - 1)]
+	}
+	return nil
 }
 
-// Get returns the currently set
-// broadcast value.
-func (b *Broadcaster) Get() interface{} {
-	b.mu.Lock()
-	r := b.cur
-	b.mu.Unlock()
-	return r
-}
-
-// Bcast is the common case of doing
-// both Set() and then On() together
-// to start broadcasting a new value.
+// Bcast broadcasts a new value.
+// Any old unreceived values are purged
+// from the receive queues before sending.
+// Since the receivers are all buffered
+// channels, Bcast should never block
+// waiting on a receiver.
+//
+// Any subscriber who subscribes after the Bcast will not
+// receive the Bcast value, as it is not
+// stored internally.
 //
 func (b *Broadcaster) Bcast(val interface{}) {
 	b.mu.Lock()
-	b.cur = val
 	b.drain()
-	b.on = true
-	b.fill()
+	b.fill(val)
+	b.mu.Unlock()
+}
+
+// Signal works like sync.Cond's Signal.
+// It sends val to exactly one listener.
+//
+// The listener is chosen uniformly at random
+// from the subscribers.
+//
+// Any old value leftover in the chosen
+// receiver's buffer is purged first.
+//
+func (b *Broadcaster) Signal(val interface{}) {
+	b.mu.Lock()
+	n := len(b.names)
+	i := rand.Intn(n)
+	ch := b.subscribers[b.names[i]]
+
+	// drain first, any old value
+	select {
+	case <-ch:
+	default:
+	}
+	// then fill with new
+	ch <- val
 	b.mu.Unlock()
 }
 
@@ -83,9 +135,7 @@ func (b *Broadcaster) Bcast(val interface{}) {
 // empties the channel of any old values.
 func (b *Broadcaster) Clear() {
 	b.mu.Lock()
-	b.on = false
 	b.drain()
-	b.cur = nil
 	b.mu.Unlock()
 }
 
@@ -104,10 +154,10 @@ func (b *Broadcaster) drain() {
 
 // fill up the channels
 // Caller must already hold the b.mu.Lock().
-func (b *Broadcaster) fill() {
+func (b *Broadcaster) fill(val interface{}) {
 	for _, ch := range b.subscribers {
 		select {
-		case ch <- b.cur:
+		case ch <- val:
 		default:
 		}
 	}
