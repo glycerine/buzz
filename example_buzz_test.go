@@ -8,7 +8,7 @@ import (
 
 func Example() {
 
-	b := buzz.New()
+	b := buzz.NewTower()
 	ch := b.Subscribe("me")
 	go func() {
 		for {
@@ -19,9 +19,9 @@ func Example() {
 		}
 	}()
 
-	b.Bcast(4)
+	b.Broadcast(4)
 	time.Sleep(20 * time.Millisecond)
-	b.Bcast(5)
+	b.Broadcast(5)
 	time.Sleep(20 * time.Millisecond)
 	b.Clear()
 	time.Sleep(20 * time.Millisecond)

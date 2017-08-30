@@ -1,23 +1,23 @@
 // package buzz provides 1:M value-broadcasting channels.
 //
-// The sending is handled by the main object, the Broadcaster.
-// Call buzz.New() to obtain one.
+// The sending is handled by the main object, the Tower.
+// Call buzz.NewTower() to obtain one.
 //
 // Receivers get their own personal channels.
 // To get their channel, a Receivers will call Subscribe()
-// on the Broadcaster with
+// on the Tower with
 // their string identifier. They obtain a channel
 // to receive on. They should never close this channel,
 // and should never send on it.
 // Receviers can unsubscribe using Unsub().
 //
-// To send to all receivers, call Broadcaster.Bcast().
+// To send to all receivers, call Tower.Broadcast().
 //
-// Upon broadcast via Bcast(), each subscriber will
+// Upon broadcast via Broadcast(), each subscriber will
 // have a copy of the broadcast value in their 1-buffered channel
 // to read when they like.
 //
-// Broadcaster.Clear() will stop broadcasting that value, and empty any
+// Tower.Clear() will stop broadcasting that value, and empty any
 // unconsumed values from each of the individual subscription
 // channels.
 package buzz
@@ -28,23 +28,23 @@ import (
 	"sync"
 )
 
-// Broadcaster is an 1:M non-blocking value-loadable channel.
+// Tower is an 1:M non-blocking value-loadable channel.
 //
 // Each subscriber gets their own private channel, and it
-// will get a copy of whatever is sent to Broadcaster.
-type Broadcaster struct {
+// will get a copy of whatever is sent to Tower.
+type Tower struct {
 	subscribers map[string]chan interface{}
 	names       []string
 	mu          sync.Mutex
 }
 
-func New() *Broadcaster {
-	return &Broadcaster{
+func NewTower() *Tower {
+	return &Tower{
 		subscribers: make(map[string]chan interface{}),
 	}
 }
 
-func (b *Broadcaster) Subscribe(name string) chan interface{} {
+func (b *Tower) Subscribe(name string) chan interface{} {
 	b.mu.Lock()
 	ch := make(chan interface{}, 1)
 	b.subscribers[name] = ch
@@ -53,7 +53,7 @@ func (b *Broadcaster) Subscribe(name string) chan interface{} {
 	return ch
 }
 
-func (b *Broadcaster) Unsub(name string) error {
+func (b *Tower) Unsub(name string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	delete(b.subscribers, name)
@@ -88,18 +88,18 @@ func (b *Broadcaster) Unsub(name string) error {
 	return nil
 }
 
-// Bcast broadcasts a new value.
+// Broadcast sends a copy of val to all subscribers.
 // Any old unreceived values are purged
 // from the receive queues before sending.
 // Since the receivers are all buffered
-// channels, Bcast should never block
+// channels, Broadcast should never block
 // waiting on a receiver.
 //
-// Any subscriber who subscribes after the Bcast will not
-// receive the Bcast value, as it is not
+// Any subscriber who subscribes after the Broadcast will not
+// receive the Broadcast value, as it is not
 // stored internally.
 //
-func (b *Broadcaster) Bcast(val interface{}) {
+func (b *Tower) Broadcast(val interface{}) {
 	b.mu.Lock()
 	b.drain()
 	b.fill(val)
@@ -115,7 +115,7 @@ func (b *Broadcaster) Bcast(val interface{}) {
 // Any old value leftover in the chosen
 // receiver's buffer is purged first.
 //
-func (b *Broadcaster) Signal(val interface{}) {
+func (b *Tower) Signal(val interface{}) {
 	b.mu.Lock()
 	n := len(b.names)
 	i := rand.Intn(n)
@@ -133,7 +133,7 @@ func (b *Broadcaster) Signal(val interface{}) {
 
 // Clear turns off broadcasting and
 // empties the channel of any old values.
-func (b *Broadcaster) Clear() {
+func (b *Tower) Clear() {
 	b.mu.Lock()
 	b.drain()
 	b.mu.Unlock()
@@ -142,7 +142,7 @@ func (b *Broadcaster) Clear() {
 // drain all messages, leaving b.Ch empty.
 // Users typically want Clear() instead.
 // Caller must already hold the b.mu.Lock().
-func (b *Broadcaster) drain() {
+func (b *Tower) drain() {
 	// empty channels
 	for _, ch := range b.subscribers {
 		select {
@@ -154,7 +154,7 @@ func (b *Broadcaster) drain() {
 
 // fill up the channels
 // Caller must already hold the b.mu.Lock().
-func (b *Broadcaster) fill(val interface{}) {
+func (b *Tower) fill(val interface{}) {
 	for _, ch := range b.subscribers {
 		select {
 		case ch <- val:

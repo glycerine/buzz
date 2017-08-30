@@ -7,7 +7,7 @@ import (
 
 func TestBuzz(t *testing.T) {
 
-	z := buzz.New()
+	z := buzz.NewTower()
 	buzzCh := z.Subscribe("me")
 	buzzCh2 := z.Subscribe("you")
 
@@ -19,12 +19,12 @@ func TestBuzz(t *testing.T) {
 	}
 
 	aligator := "bill"
-	z.Bcast(aligator)
+	z.Broadcast(aligator)
 
 	select {
 	case b := <-buzzCh:
 		if b != aligator {
-			t.Fatal("Bcast(aligator) means aligator should be read on the buzzCh")
+			t.Fatal("Broadcast(aligator) means aligator should be read on the buzzCh")
 		}
 	default:
 		t.Fatal("buzzCh is now closed, bad. Instead, it should have read back aligator. Refresh should have restocked us.")
@@ -33,7 +33,7 @@ func TestBuzz(t *testing.T) {
 	select {
 	case b := <-buzzCh2:
 		if b != aligator {
-			t.Fatal("Bcast(aligator) means aligator should be read on the buzzCh2")
+			t.Fatal("Broadcast(aligator) means aligator should be read on the buzzCh2")
 		}
 	default:
 		t.Fatal("buzzCh2 is now closed, bad. Instead, it should have read back aligator. Refresh should have restocked us.")
@@ -41,12 +41,12 @@ func TestBuzz(t *testing.T) {
 
 	// multiple Set are fine:
 	crocadile := "lyle"
-	z.Bcast(crocadile)
+	z.Broadcast(crocadile)
 
 	select {
 	case b := <-buzzCh:
 		if b != crocadile {
-			t.Fatal("Bcast(crocadile) means crocadile should be read on the buzzCh")
+			t.Fatal("Broadcast(crocadile) means crocadile should be read on the buzzCh")
 		}
 	default:
 		t.Fatal("buzzCh is now closed, bad. Instead, it should have read back crocadile. Refresh should have restocked us.")
@@ -55,7 +55,7 @@ func TestBuzz(t *testing.T) {
 	select {
 	case b := <-buzzCh2:
 		if b != crocadile {
-			t.Fatal("Bcast(crocadile) means crocadile should be read on the buzzCh2")
+			t.Fatal("Broadcast(crocadile) means crocadile should be read on the buzzCh2")
 		}
 	default:
 		t.Fatal("buzzCh2 is now closed, bad. Instead, it should have read back crocadile. Refresh should have restocked us.")
