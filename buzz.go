@@ -79,14 +79,16 @@ var ErrShutdown = fmt.Errorf("channel shut down")
 // stored internally.
 //
 func (b *AsyncTower) Broadcast(val int) (err error) {
-	defer func() {
-		r := recover()
-		if r != nil {
-			// send on closed channel
-			//fmt.Printf("Broadcast recovered from '%#v'\n", r)
-			err = ErrClosed
-		}
-	}()
+	/*
+		defer func() {
+			r := recover()
+			if r != nil {
+				// send on closed channel
+				//fmt.Printf("Broadcast recovered from '%#v'\n", r)
+				err = ErrClosed
+			}
+		}()
+	*/
 	b.sub <- val
 	return nil
 }
@@ -141,6 +143,19 @@ defer recover in Async, not in sync
 BenchmarkCondToCond-4          	 3000000	       474 ns/op	  16.86 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       515 ns/op	  15.53 MB/s
 BenchmarkSyncTowerToTower-4    	 5000000	       480 ns/op	  16.66 MB/s
+
+defer recover in both async and sync
+BenchmarkCondToCond-4          	 3000000	       475 ns/op	  16.81 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       573 ns/op	  13.96 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       557 ns/op	  14.36 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.90 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       572 ns/op	  13.97 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       542 ns/op	  14.74 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       472 ns/op	  16.94 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       560 ns/op	  14.27 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       554 ns/op	  14.43 MB/s
 
 
 */

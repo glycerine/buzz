@@ -72,6 +72,15 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 	reqStop, done := make(chan bool), make(chan bool)
 
 	go func() {
+		defer func() {
+			r := recover()
+			if r != nil {
+				// send on closed channel
+				//fmt.Printf("Broadcast recovered from '%#v'\n", r)
+				close(done)
+			}
+		}()
+
 		// consume odd, produce even integers
 		var val2 int
 		ok := false
@@ -146,6 +155,14 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 	reqStop, done := make(chan bool), make(chan bool)
 
 	go func() {
+		defer func() {
+			r := recover()
+			if r != nil {
+				// send on closed channel
+				//fmt.Printf("Broadcast recovered from '%#v'\n", r)
+				close(done)
+			}
+		}()
 		// consume odd, produce even integers
 		var val2 int
 		ok := false
@@ -237,5 +254,10 @@ BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.91 MB/s
 BenchmarkAsyncTowerToTower-4   	 2000000	       646 ns/op	  12.38 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       447 ns/op	  17.88 MB/s
 
+with the defer recover OUTSIDE of the tight send loop, we actually
+get better performance with channels
+BenchmarkCondToCond-4          	 3000000	       461 ns/op	  17.33 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       415 ns/op	  19.24 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       559 ns/op	  14.29 MB/s
 
 */

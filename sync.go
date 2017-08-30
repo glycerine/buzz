@@ -2,17 +2,30 @@ package buzz
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
+// SyncTower is an 1:M non-blocking value-loadable channel.
+//
+// Each subscriber gets their own private channel, and it
+// will get a copy of whatever is sent to SyncTower.
+//
+// Sends don't block, as subscribers are given buffered channels.
+//
 type SyncTower struct {
-	sub    chan int
-	mut    sync.Mutex
-	closed bool
+	sub       chan int
+	mut       sync.Mutex
+	closed    bool
+	hasClosed int32
+
+	reqStop chan bool
 }
 
 // NewSyncTower makes a new SyncTower.
 func NewSyncTower() *SyncTower {
-	return &SyncTower{}
+	return &SyncTower{
+		reqStop: make(chan bool),
+	}
 }
 
 // Subscribe returns a new channel that will receive
@@ -36,15 +49,17 @@ func (b *SyncTower) Subscribe(name string) chan int {
 // receive the Broadcast value, as it is not
 // stored internally.
 //
-func (b *SyncTower) Broadcast(val int) error {
-	b.mut.Lock()
-	if !b.closed {
-		b.mut.Unlock()
-		b.sub <- val
-		return nil
-	}
-	b.mut.Unlock()
-	return ErrClosed
+func (b *SyncTower) Broadcast(val int) (err error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			// send on closed channel
+			//fmt.Printf("Broadcast recovered from '%#v'\n", r)
+			err = ErrClosed
+		}
+	}()
+	b.sub <- val
+	return nil
 }
 
 func (b *SyncTower) Close() error {
@@ -54,6 +69,11 @@ func (b *SyncTower) Close() error {
 		return ErrClosed
 	}
 	b.closed = true
+	swapped := atomic.CompareAndSwapInt32(&b.hasClosed, 0, 1)
+	if !swapped {
+		panic("logic error")
+	}
+
 	close(b.sub)
 	b.mut.Unlock()
 	return nil
