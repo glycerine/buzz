@@ -139,8 +139,7 @@ func (b *AsyncTower) Signal(val interface{}) {
 	b.mu.Unlock()
 }
 
-// Clear turns off broadcasting and
-// empties the channel of any old values.
+// Clear empties the channel of any old values.
 func (b *AsyncTower) Clear() {
 	b.mu.Lock()
 	b.drain()

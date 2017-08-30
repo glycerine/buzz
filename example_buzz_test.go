@@ -20,6 +20,9 @@ func Example() {
 	}()
 
 	b.Broadcast(4)
+
+	// since we're async, if we don't pause, the
+	// subscriber above might miss the 4.
 	time.Sleep(20 * time.Millisecond)
 	b.Broadcast(5)
 	time.Sleep(20 * time.Millisecond)
