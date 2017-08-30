@@ -81,33 +81,20 @@ var ErrShutdown = fmt.Errorf("channel shut down")
 // stored internally.
 //
 func (b *AsyncTower) Broadcast(val int) {
-	if false {
-		/*
-			BenchmarkCondToCond-4          	 3000000	       474 ns/op	  16.86 MB/s
-			BenchmarkAsyncTowerToTower-4   	 3000000	       443 ns/op	  18.02 MB/s
-			BenchmarkSyncTowerToTower-4    	 3000000	       423 ns/op	  18.91 MB/s
+	for i := range b.subs {
+		b.subs[i] <- val // race here, with the close. duh. on purpose.
+		/* 5% faster
+							BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.91 MB/s
+							BenchmarkAsyncTowerToTower-4   	 3000000	       412 ns/op	  19.40 MB/s
+							BenchmarkSyncTowerToTower-4    	 3000000	       418 ns/op	  19.12 MB/s
 
-		*/
-		for i := range b.subs {
-			b.subs[i] <- val // race here, with the close. duh. on purpose.
-			/* 5% faster
-						BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.91 MB/s
-						BenchmarkAsyncTowerToTower-4   	 3000000	       412 ns/op	  19.40 MB/s
-						BenchmarkSyncTowerToTower-4    	 3000000	       418 ns/op	  19.12 MB/s
+				BenchmarkCondToCond-4          	 3000000	       459 ns/op	  17.41 MB/s
+				BenchmarkAsyncTowerToTower-4   	 3000000	       439 ns/op	  18.18 MB/s
+				BenchmarkSyncTowerToTower-4    	 3000000	       424 ns/op	  18.85 MB/s
 
-			BenchmarkCondToCond-4          	 3000000	       459 ns/op	  17.41 MB/s
-			BenchmarkAsyncTowerToTower-4   	 3000000	       439 ns/op	  18.18 MB/s
-			BenchmarkSyncTowerToTower-4    	 3000000	       424 ns/op	  18.85 MB/s
-
-			*/
-		}
-	} else {
-		b.one <- val
-		/*
-		BenchmarkCondToCond-4          	 3000000	       459 ns/op	  17.40 MB/s
-		BenchmarkAsyncTowerToTower-4   	 3000000	       416 ns/op	  19.19 MB/s
-		BenchmarkSyncTowerToTower-4    	 3000000	       431 ns/op	  18.55 MB/s
-
+		BenchmarkCondToCond-4          	 3000000	       456 ns/op	  17.54 MB/s
+		BenchmarkAsyncTowerToTower-4   	 3000000	       423 ns/op	  18.88 MB/s
+		BenchmarkSyncTowerToTower-4    	 3000000	       421 ns/op	  18.97 MB/s
 		*/
 	}
 }
@@ -121,7 +108,7 @@ func (b *AsyncTower) Close() error {
 	b.closed = true
 
 	for i := range b.subs {
-		close(b.subs[i]) // race here
+		close(b.subs[i]) // race here, expected.
 	}
 	b.mut.Unlock()
 	return nil
