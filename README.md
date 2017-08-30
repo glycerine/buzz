@@ -13,8 +13,7 @@ A `buzz.AsyncTower` is a re-usable alternative to closing channels.
 Closing channels is convenient, but you have to allocate
 a new channel every time you want to broadcast. Another
 advantage of using `buzz.AsyncTower` is that you get to
-convey a value of your choice to subscribers, along with
-the information that something is happening on the channel.
+convey a value.
 
 Each subscriber is allocated a buffered channel of size 1.
 
