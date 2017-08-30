@@ -55,9 +55,9 @@ tower.Signal(val)
 
 ## SyncTower
 
-The `buzz.SyncTower`, also in this package, differs from
-`buzz.AsyncTower` only in that receives
-are all synchronous on unbuffered channes. Hence publishers will
+The `buzz.SyncTower`, also in this package, is the same as
+`buzz.AsyncTower` except in one respect. `buzz.SyncTower`
+uses unbuffered channels. Hence publishers will
 block until all subscribers have received the message.
 
 # author
