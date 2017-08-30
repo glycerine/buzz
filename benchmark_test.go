@@ -93,12 +93,7 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 				return
 			}
 			val2++
-			if nil != evenTower.Broadcast(val2) {
-				//fmt.Printf("consume odd: even closed, closing odd\n")
-				oddTower.Close()
-				close(done)
-				return
-			}
+			evenTower.Broadcast(val2)
 		}
 
 	}()
@@ -119,11 +114,7 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 		}
 		val++
 		//oddCh <- val
-		if nil != oddTower.Broadcast(val) {
-			//fmt.Printf("consume even: odd closed, closing even\n")
-			evenTower.Close()
-			break
-		}
+		oddTower.Broadcast(val)
 	}
 	b.StopTimer()
 	//fmt.Printf("done with b.N loop\n")
@@ -175,12 +166,7 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 				return
 			}
 			val2++
-			if nil != evenTower.Broadcast(val2) {
-				//fmt.Printf("consume odd: even closed, closing odd\n")
-				oddTower.Close()
-				close(done)
-				return
-			}
+			evenTower.Broadcast(val2)
 		}
 
 	}()
@@ -201,11 +187,8 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 		}
 		val++
 		//oddCh <- val
-		if nil != oddTower.Broadcast(val) {
-			//fmt.Printf("consume even: odd closed, closing even\n")
-			evenTower.Close()
-			break
-		}
+		oddTower.Broadcast(val)
+
 	}
 	b.StopTimer()
 	//fmt.Printf("done with b.N loop\n")
@@ -276,5 +259,9 @@ BenchmarkSyncTowerToTower-4    	 3000000	       424 ns/op	  18.84 MB/s
 BenchmarkCondToCond-4          	 3000000	       448 ns/op	  17.85 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       425 ns/op	  18.78 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       419 ns/op	  19.07 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       470 ns/op	  17.01 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       412 ns/op	  19.39 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       423 ns/op	  18.88 MB/s
 
 */

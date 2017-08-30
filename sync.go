@@ -49,7 +49,7 @@ func (b *SyncTower) Subscribe(name string) chan int {
 // receive the Broadcast value, as it is not
 // stored internally.
 //
-func (b *SyncTower) Broadcast(val int) (err error) {
+func (b *SyncTower) Broadcast(val int) {
 	/*
 		defer func() {
 			r := recover()
@@ -61,7 +61,6 @@ func (b *SyncTower) Broadcast(val int) (err error) {
 		}()
 	*/
 	b.sub <- val
-	return nil
 }
 
 func (b *SyncTower) Close() error {

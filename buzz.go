@@ -78,7 +78,7 @@ var ErrShutdown = fmt.Errorf("channel shut down")
 // receive the Broadcast value, as it is not
 // stored internally.
 //
-func (b *AsyncTower) Broadcast(val int) (err error) {
+func (b *AsyncTower) Broadcast(val int) {
 	/*
 		defer func() {
 			r := recover()
@@ -90,7 +90,6 @@ func (b *AsyncTower) Broadcast(val int) (err error) {
 		}()
 	*/
 	b.sub <- val
-	return nil
 }
 
 func (b *AsyncTower) Close() error {
