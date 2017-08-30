@@ -15,16 +15,14 @@ import (
 // Subscribers are given unbuffered channels.
 //
 type SyncTower struct {
-	subscribers map[string]chan interface{}
-	names       []string
-	mu          sync.Mutex
+	subs  []chan interface{}
+	names []string
+	mu    sync.Mutex
 }
 
 // NewSyncTower makes a new SyncTower.
 func NewSyncTower() *SyncTower {
-	return &SyncTower{
-		subscribers: make(map[string]chan interface{}),
-	}
+	return &SyncTower{}
 }
 
 // Subscribe returns a new channel that will receive
@@ -32,7 +30,7 @@ func NewSyncTower() *SyncTower {
 func (b *SyncTower) Subscribe(name string) chan interface{} {
 	b.mu.Lock()
 	ch := make(chan interface{}, 1)
-	b.subscribers[name] = ch
+	b.subs = append(b.subs, ch)
 	b.names = append(b.names, name)
 	b.mu.Unlock()
 	return ch
@@ -42,7 +40,6 @@ func (b *SyncTower) Subscribe(name string) chan interface{} {
 func (b *SyncTower) Unsub(name string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	delete(b.subscribers, name)
 
 	// names is separate, also needs updating
 	k := -1
@@ -61,20 +58,24 @@ func (b *SyncTower) Unsub(name string) error {
 	case k == 0:
 		if n == 1 {
 			b.names = nil
+			b.subs = nil
 		} else {
 			b.names = b.names[1:]
+			b.subs = b.subs[1:]
 		}
 
 	case k < n-1: // k >= 1 and n >= 2
 		b.names = append(b.names[:k], b.names[(k+1):]...)
+		b.subs = append(b.subs[:k], b.subs[(k+1):]...)
 
 	case k == n-1:
 		b.names = b.names[:(n - 1)]
+		b.subs = b.subs[:(n - 1)]
 	}
 	return nil
 }
 
-// Broadcast sends a copy of val to all subscribers.
+// Broadcast sends a copy of val to all subs.
 // Since the receivers are all unbuffered
 // channels, Broadcast will  block
 // waiting on all receives.
@@ -85,7 +86,7 @@ func (b *SyncTower) Unsub(name string) error {
 //
 func (b *SyncTower) Broadcast(val interface{}) {
 	b.mu.Lock()
-	for _, ch := range b.subscribers {
+	for _, ch := range b.subs {
 		select {
 		case ch <- val:
 		default:
@@ -98,13 +99,13 @@ func (b *SyncTower) Broadcast(val interface{}) {
 // It sends val to exactly one listener.
 //
 // The listener is chosen uniformly at random
-// from the subscribers.
+// from the subs.
 //
 func (b *SyncTower) Signal(val interface{}) {
 	b.mu.Lock()
 	n := len(b.names)
 	i := rand.Intn(n)
-	ch := b.subscribers[b.names[i]]
+	ch := b.subs[i]
 
 	// drain first, any old value
 	select {
