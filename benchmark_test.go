@@ -254,10 +254,17 @@ BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.91 MB/s
 BenchmarkAsyncTowerToTower-4   	 2000000	       646 ns/op	  12.38 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       447 ns/op	  17.88 MB/s
 
+provacative go blog title: Unintuitive Go: why you should send on closed channels for performance
+
 with the defer recover OUTSIDE of the tight send loop, we actually
 get better performance with channels
 BenchmarkCondToCond-4          	 3000000	       461 ns/op	  17.33 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       415 ns/op	  19.24 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       559 ns/op	  14.29 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       467 ns/op	  17.09 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       422 ns/op	  18.94 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       577 ns/op	  13.86 MB/s
+
 
 */
