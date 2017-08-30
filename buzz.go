@@ -50,7 +50,7 @@ func NewAsyncTower() *AsyncTower {
 // all Broadcast values.
 func (b *AsyncTower) Subscribe(name string) chan int {
 	b.mu.Lock()
-	ch := make(chan int)
+	ch := make(chan int, 1)
 	b.sub = ch
 	b.mu.Unlock()
 	return ch
@@ -77,3 +77,15 @@ func (b *AsyncTower) Clear() {
 	default:
 	}
 }
+
+/*
+
+BenchmarkCondToCond-4          	 3000000	       475 ns/op	  16.83 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       439 ns/op	  18.19 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       449 ns/op	  17.79 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       474 ns/op	  16.86 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       442 ns/op	  18.07 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       447 ns/op	  17.88 MB/s
+
+*/

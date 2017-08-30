@@ -124,19 +124,16 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 
 	go func() {
 		// consume odd, produce even integers
-		var ival interface{}
 		var val2 int
+		ok := false
 		for {
-			select {
-			case <-reqStop:
+			val2, ok = <-oddCh
+			if !ok {
 				close(done)
-				//fmt.Printf("done with consumer loop\n")
 				return
-			case ival = <-oddCh:
-				val2 = ival.(int)
-				val2++
-				evenTower.Broadcast(val2)
 			}
+			val2++
+			evenCh <- val2
 		}
 
 	}()
@@ -146,18 +143,29 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 
 	// consume even, produce odd integers
 	val = 1
-	oddTower.Broadcast(val)
+	oddTower.sub <- val
 	for i := 0; i < b.N; i++ {
-		select {
-		case next := <-evenCh:
-			val = next.(int)
-			val++
-			oddTower.Broadcast(val)
-		}
+		val = <-evenCh
+		val++
+		oddCh <- val
 	}
 	b.StopTimer()
+	close(oddCh)
+
+	// drain
+	select {
+	case <-evenCh:
+	case <-time.After(time.Second):
+	}
 	//fmt.Printf("done with producer loop\n")
 	close(reqStop)
 	<-done
 	//	fmt.Printf("tower benchmark done!")
 }
+
+/*
+BenchmarkCondToCond-4          	                 3000000	       475 ns/op	  16.83 MB/s
+BenchmarkAsyncTowerToTower-4 (actually sync)   	 3000000	       445 ns/op	  17.94 MB/s
+BenchmarkSyncTowerToTower-4    	                 2000000	       666 ns/op	  12.00 MB/s
+
+*/
