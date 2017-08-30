@@ -5,8 +5,9 @@ import (
 )
 
 type SyncTower struct {
-	sub chan int
-	mu  sync.Mutex
+	sub    chan int
+	mut    sync.Mutex
+	closed bool
 }
 
 // NewSyncTower makes a new SyncTower.
@@ -17,10 +18,10 @@ func NewSyncTower() *SyncTower {
 // Subscribe returns a new channel that will receive
 // all Broadcast values.
 func (b *SyncTower) Subscribe(name string) chan int {
-	b.mu.Lock()
-	ch := make(chan int)
+	b.mut.Lock()
+	ch := make(chan int, 1)
 	b.sub = ch
-	b.mu.Unlock()
+	b.mut.Unlock()
 	return ch
 }
 
@@ -35,8 +36,27 @@ func (b *SyncTower) Subscribe(name string) chan int {
 // receive the Broadcast value, as it is not
 // stored internally.
 //
-func (b *SyncTower) Broadcast(val int) {
-	b.sub <- val
+func (b *SyncTower) Broadcast(val int) error {
+	b.mut.Lock()
+	if !b.closed {
+		b.mut.Unlock()
+		b.sub <- val
+		return nil
+	}
+	b.mut.Unlock()
+	return ErrClosed
+}
+
+func (b *SyncTower) Close() error {
+	b.mut.Lock()
+	if b.closed {
+		b.mut.Unlock()
+		return ErrClosed
+	}
+	b.closed = true
+	close(b.sub)
+	b.mut.Unlock()
+	return nil
 }
 
 func (b *SyncTower) Clear() {

@@ -1,9 +1,10 @@
 package buzz
 
 import (
+	//"fmt"
 	"sync"
 	"testing"
-	"time"
+	//"time"
 )
 
 func BenchmarkCondToCond(b *testing.B) {
@@ -75,13 +76,20 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 		var val2 int
 		ok := false
 		for {
-			val2, ok = <-oddCh
+			val2, ok = <-oddCh // blocked here, done with b.N loop
 			if !ok {
+				//fmt.Printf("consume odd: odd closed, closing even\n")
+				evenTower.Close()
 				close(done)
 				return
 			}
 			val2++
-			evenCh <- val2
+			if nil != evenTower.Broadcast(val2) {
+				//fmt.Printf("consume odd: even closed, closing odd\n")
+				oddTower.Close()
+				close(done)
+				return
+			}
 		}
 
 	}()
@@ -92,19 +100,34 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 	// consume even, produce odd integers
 	val = 1
 	oddTower.sub <- val
+	ok := false
 	for i := 0; i < b.N; i++ {
-		val = <-evenCh
+		val, ok = <-evenCh
+		if !ok {
+			//fmt.Printf("consume even: even closed, closing odd\n")
+			oddTower.Close()
+			break
+		}
 		val++
-		oddCh <- val
+		//oddCh <- val
+		if nil != oddTower.Broadcast(val) {
+			//fmt.Printf("consume even: odd closed, closing even\n")
+			evenTower.Close()
+			break
+		}
 	}
 	b.StopTimer()
-	close(oddCh)
+	//fmt.Printf("done with b.N loop\n")
+	oddTower.Close()
+	evenTower.Close()
+	//fmt.Printf("done with b.N loop and towers closed\n")
 
 	// drain
-	select {
-	case <-evenCh:
-	case <-time.After(time.Second):
-	}
+	/*	select {
+		case <-evenCh:
+		case <-time.After(time.Second):
+		}
+	*/
 	//fmt.Printf("done with producer loop\n")
 	close(reqStop)
 	<-done
@@ -127,13 +150,20 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 		var val2 int
 		ok := false
 		for {
-			val2, ok = <-oddCh
+			val2, ok = <-oddCh // blocked here, done with b.N loop
 			if !ok {
+				//fmt.Printf("consume odd: odd closed, closing even\n")
+				evenTower.Close()
 				close(done)
 				return
 			}
 			val2++
-			evenCh <- val2
+			if nil != evenTower.Broadcast(val2) {
+				//fmt.Printf("consume odd: even closed, closing odd\n")
+				oddTower.Close()
+				close(done)
+				return
+			}
 		}
 
 	}()
@@ -144,19 +174,34 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 	// consume even, produce odd integers
 	val = 1
 	oddTower.sub <- val
+	ok := false
 	for i := 0; i < b.N; i++ {
-		val = <-evenCh
+		val, ok = <-evenCh
+		if !ok {
+			//fmt.Printf("consume even: even closed, closing odd\n")
+			oddTower.Close()
+			break
+		}
 		val++
-		oddCh <- val
+		//oddCh <- val
+		if nil != oddTower.Broadcast(val) {
+			//fmt.Printf("consume even: odd closed, closing even\n")
+			evenTower.Close()
+			break
+		}
 	}
 	b.StopTimer()
-	close(oddCh)
+	//fmt.Printf("done with b.N loop\n")
+	oddTower.Close()
+	evenTower.Close()
+	//fmt.Printf("done with b.N loop and towers closed\n")
 
 	// drain
-	select {
-	case <-evenCh:
-	case <-time.After(time.Second):
-	}
+	/*	select {
+		case <-evenCh:
+		case <-time.After(time.Second):
+		}
+	*/
 	//fmt.Printf("done with producer loop\n")
 	close(reqStop)
 	<-done
@@ -167,5 +212,20 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 BenchmarkCondToCond-4          	                 3000000	       475 ns/op	  16.83 MB/s
 BenchmarkAsyncTowerToTower-4 (actually sync)   	 3000000	       445 ns/op	  17.94 MB/s
 BenchmarkSyncTowerToTower-4    	                 2000000	       666 ns/op	  12.00 MB/s
+
+add function wrapper around async send:
+BenchmarkCondToCond-4          	 3000000	       464 ns/op	  17.22 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       429 ns/op	  18.61 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       433 ns/op	  18.44 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       477 ns/op	  16.77 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       434 ns/op	  18.39 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       436 ns/op	  18.34 MB/s
+
+with mutex protection of close and function wrapper around send, but no select on Broadcast:
+BenchmarkCondToCond-4          	 3000000	       483 ns/op	  16.53 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       441 ns/op	  18.11 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       486 ns/op	  16.43 MB/s
+
 
 */
