@@ -28,7 +28,7 @@ package buzz
 import (
 	"fmt"
 	"sync"
-	"sync/atomic"
+	//"sync/atomic"
 )
 
 // AsyncTower is an 1:M non-blocking value-loadable channel.
@@ -39,7 +39,8 @@ import (
 // Sends don't block, as subscribers are given buffered channels.
 //
 type AsyncTower struct {
-	sub       chan int
+	subs      []chan int
+	one       chan int
 	mut       sync.Mutex
 	closed    bool
 	hasClosed int32
@@ -59,7 +60,8 @@ func NewAsyncTower() *AsyncTower {
 func (b *AsyncTower) Subscribe(name string) chan int {
 	b.mut.Lock()
 	ch := make(chan int, 1)
-	b.sub = ch
+	b.subs = append(b.subs, ch)
+	b.one = ch
 	b.mut.Unlock()
 	return ch
 }
@@ -79,17 +81,24 @@ var ErrShutdown = fmt.Errorf("channel shut down")
 // stored internally.
 //
 func (b *AsyncTower) Broadcast(val int) {
-	/*
-		defer func() {
-			r := recover()
-			if r != nil {
-				// send on closed channel
-				//fmt.Printf("Broadcast recovered from '%#v'\n", r)
-				err = ErrClosed
-			}
-		}()
-	*/
-	b.sub <- val
+	if false {
+		/*
+			BenchmarkCondToCond-4          	 3000000	       474 ns/op	  16.86 MB/s
+			BenchmarkAsyncTowerToTower-4   	 3000000	       443 ns/op	  18.02 MB/s
+			BenchmarkSyncTowerToTower-4    	 3000000	       423 ns/op	  18.91 MB/s
+
+		*/
+		for i := range b.subs {
+			b.subs[i] <- val
+			/* 5% faster
+			BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.91 MB/s
+			BenchmarkAsyncTowerToTower-4   	 3000000	       412 ns/op	  19.40 MB/s
+			BenchmarkSyncTowerToTower-4    	 3000000	       418 ns/op	  19.12 MB/s
+			*/
+		}
+	} else {
+		b.one <- val
+	}
 }
 
 func (b *AsyncTower) Close() error {
@@ -99,20 +108,20 @@ func (b *AsyncTower) Close() error {
 		return ErrClosed
 	}
 	b.closed = true
-	swapped := atomic.CompareAndSwapInt32(&b.hasClosed, 0, 1)
-	if !swapped {
-		panic("logic error")
-	}
 
-	close(b.sub)
+	for i := range b.subs {
+		close(b.subs[i])
+	}
 	b.mut.Unlock()
 	return nil
 }
 
 func (b *AsyncTower) Clear() {
-	select {
-	case <-b.sub:
-	default:
+	for i := range b.subs {
+		select {
+		case <-b.subs[i]:
+		default:
+		}
 	}
 }
 
@@ -144,17 +153,10 @@ BenchmarkAsyncTowerToTower-4   	 3000000	       515 ns/op	  15.53 MB/s
 BenchmarkSyncTowerToTower-4    	 5000000	       480 ns/op	  16.66 MB/s
 
 defer recover in both async and sync
-BenchmarkCondToCond-4          	 3000000	       475 ns/op	  16.81 MB/s
-BenchmarkAsyncTowerToTower-4   	 3000000	       573 ns/op	  13.96 MB/s
-BenchmarkSyncTowerToTower-4    	 3000000	       557 ns/op	  14.36 MB/s
 
-BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.90 MB/s
-BenchmarkAsyncTowerToTower-4   	 3000000	       572 ns/op	  13.97 MB/s
-BenchmarkSyncTowerToTower-4    	 3000000	       542 ns/op	  14.74 MB/s
-
-BenchmarkCondToCond-4          	 3000000	       472 ns/op	  16.94 MB/s
-BenchmarkAsyncTowerToTower-4   	 3000000	       560 ns/op	  14.27 MB/s
-BenchmarkSyncTowerToTower-4    	 3000000	       554 ns/op	  14.43 MB/s
+BenchmarkCondToCond-4          	 3000000	       468 ns/op	  17.09 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       413 ns/op	  19.36 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       425 ns/op	  18.79 MB/s
 
 
 */

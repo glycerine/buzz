@@ -103,7 +103,7 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 
 	// consume even, produce odd integers
 	val = 1
-	oddTower.sub <- val
+	oddTower.subs[0] <- val
 	ok := false
 	for i := 0; i < b.N; i++ {
 		val, ok = <-evenCh
@@ -239,6 +239,10 @@ BenchmarkSyncTowerToTower-4    	 3000000	       447 ns/op	  17.88 MB/s
 
 provacative go blog title: Unintuitive Go: why you should send on closed channels for performance
 
+* defer is expensive.
+* select is expensive.
+* sync.Cond is fast, but somewhat error prone to use.
+
 with the defer recover OUTSIDE of the tight send loop, we actually
 get better performance with channels
 
@@ -263,5 +267,11 @@ BenchmarkSyncTowerToTower-4    	 3000000	       419 ns/op	  19.07 MB/s
 BenchmarkCondToCond-4          	 3000000	       470 ns/op	  17.01 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       412 ns/op	  19.39 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       423 ns/op	  18.88 MB/s
+
+# with slice of 1 instead of singleton chan on Async
+BenchmarkCondToCond-4          	 3000000	       454 ns/op	  17.59 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       426 ns/op	  18.78 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       420 ns/op	  19.03 MB/s
+
 
 */
