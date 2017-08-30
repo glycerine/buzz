@@ -60,6 +60,18 @@ The `buzz.SyncTower`, also in this package, is the same as
 uses unbuffered channels. Hence publishers will
 block until all subscribers have received the message.
 
+## benchmarks
+
+See the included `benchmark_test.go` file.
+
+~~~
+BenchmarkCondToCond-4          	 3000000	       462 ns/op	  17.31 MB/s
+BenchmarkAsyncTowerToTower-4   	 1000000	      1103 ns/op	   7.25 MB/s
+BenchmarkSyncTowerToTower-4    	 2000000	       889 ns/op	   8.99 MB/s
+~~~
+
+In these benchmarks, the channel based Towers are about half the speed of a cond.Sync.
+
 # author
 
 Jason E. Aten, Ph.D.
