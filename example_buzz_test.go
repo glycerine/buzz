@@ -8,7 +8,7 @@ import (
 
 func Example() {
 
-	b := buzz.NewTower()
+	b := buzz.NewAsyncTower()
 	ch := b.Subscribe("me")
 	go func() {
 		for {

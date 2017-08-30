@@ -1,25 +1,30 @@
 // package buzz provides 1:M value-broadcasting channels.
 //
-// The sending is handled by the main object, the Tower.
-// Call buzz.NewTower() to obtain one.
+// The sending is handled by the main object, the AsyncTower.
+// Call buzz.NewAsyncTower() to obtain one.
 //
 // Receivers get their own personal channels.
 // To get their channel, a Receivers will call Subscribe()
-// on the Tower with
+// on the AsyncTower with
 // their string identifier. They obtain a channel
 // to receive on. They should never close this channel,
 // and should never send on it.
 // Receviers can unsubscribe using Unsub().
 //
-// To send to all receivers, call Tower.Broadcast().
+// To send to all receivers, call AsyncTower.Broadcast().
 //
 // Upon broadcast via Broadcast(), each subscriber will
 // have a copy of the broadcast value in their 1-buffered channel
 // to read when they like.
 //
-// Tower.Clear() will stop broadcasting that value, and empty any
+// AsyncTower.Clear() will stop broadcasting that value, and empty any
 // unconsumed values from each of the individual subscription
 // channels.
+//
+// There is also a SyncTower synchronous version. Upon
+// Broadcast, a SyncTower will block until all receivers have
+// received the value.
+//
 package buzz
 
 import (
@@ -28,23 +33,26 @@ import (
 	"sync"
 )
 
-// Tower is an 1:M non-blocking value-loadable channel.
+// AsyncTower is an 1:M non-blocking value-loadable channel.
 //
 // Each subscriber gets their own private channel, and it
-// will get a copy of whatever is sent to Tower.
-type Tower struct {
+// will get a copy of whatever is sent to AsyncTower.
+//
+// Sends don't block, as subscribers are given buffered channels.
+//
+type AsyncTower struct {
 	subscribers map[string]chan interface{}
 	names       []string
 	mu          sync.Mutex
 }
 
-func NewTower() *Tower {
-	return &Tower{
+func NewAsyncTower() *AsyncTower {
+	return &AsyncTower{
 		subscribers: make(map[string]chan interface{}),
 	}
 }
 
-func (b *Tower) Subscribe(name string) chan interface{} {
+func (b *AsyncTower) Subscribe(name string) chan interface{} {
 	b.mu.Lock()
 	ch := make(chan interface{}, 1)
 	b.subscribers[name] = ch
@@ -53,7 +61,7 @@ func (b *Tower) Subscribe(name string) chan interface{} {
 	return ch
 }
 
-func (b *Tower) Unsub(name string) error {
+func (b *AsyncTower) Unsub(name string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	delete(b.subscribers, name)
@@ -99,7 +107,7 @@ func (b *Tower) Unsub(name string) error {
 // receive the Broadcast value, as it is not
 // stored internally.
 //
-func (b *Tower) Broadcast(val interface{}) {
+func (b *AsyncTower) Broadcast(val interface{}) {
 	b.mu.Lock()
 	b.drain()
 	b.fill(val)
@@ -115,7 +123,7 @@ func (b *Tower) Broadcast(val interface{}) {
 // Any old value leftover in the chosen
 // receiver's buffer is purged first.
 //
-func (b *Tower) Signal(val interface{}) {
+func (b *AsyncTower) Signal(val interface{}) {
 	b.mu.Lock()
 	n := len(b.names)
 	i := rand.Intn(n)
@@ -133,7 +141,7 @@ func (b *Tower) Signal(val interface{}) {
 
 // Clear turns off broadcasting and
 // empties the channel of any old values.
-func (b *Tower) Clear() {
+func (b *AsyncTower) Clear() {
 	b.mu.Lock()
 	b.drain()
 	b.mu.Unlock()
@@ -142,7 +150,7 @@ func (b *Tower) Clear() {
 // drain all messages, leaving b.Ch empty.
 // Users typically want Clear() instead.
 // Caller must already hold the b.mu.Lock().
-func (b *Tower) drain() {
+func (b *AsyncTower) drain() {
 	// empty channels
 	for _, ch := range b.subscribers {
 		select {
@@ -154,7 +162,7 @@ func (b *Tower) drain() {
 
 // fill up the channels
 // Caller must already hold the b.mu.Lock().
-func (b *Tower) fill(val interface{}) {
+func (b *AsyncTower) fill(val interface{}) {
 	for _, ch := range b.subscribers {
 		select {
 		case ch <- val:

@@ -7,7 +7,7 @@ import (
 
 func TestBuzz(t *testing.T) {
 
-	z := buzz.NewTower()
+	z := buzz.NewAsyncTower()
 	buzzCh := z.Subscribe("me")
 	buzzCh2 := z.Subscribe("you")
 
