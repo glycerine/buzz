@@ -1,14 +1,12 @@
 // package buzz provides 1:M value-broadcasting channels.
 //
-// The sending is handled by the main object, the AsyncTower.
-// Call buzz.NewAsyncTower() to obtain one.
+// A buzz.AsyncTower is a channel-compatible replacement for sync.Cond values.
 //
-// Receivers get their own personal channels.
-// To get their channel, a Receivers will call Subscribe()
-// on the AsyncTower with
-// their string identifier. They obtain a channel
+// Call buzz.NewAsyncTower() to start, then each subscriber
+// will call Subscribe() on the tower to obtain a channel
 // to receive on. They should never close this channel,
 // and should never send on it.
+//
 // Receviers can unsubscribe using Unsub().
 //
 // To send to all receivers, call AsyncTower.Broadcast().
