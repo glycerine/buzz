@@ -48,3 +48,11 @@ tower.Broadcast(val)
 tower.Signal(val)
 
 ~~~
+
+# author
+
+Jason E. Aten, Ph.D.
+
+# license
+
+MIT license
