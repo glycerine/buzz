@@ -11,8 +11,17 @@ A buzz.Tower is a re-usable alternative to closing channels.
 Closing channels is convenient, but you have to allocate
 a new channel every time you want to broadcast.
 
+Each subscriber is allocated a buffered channel of size 1.
+
+Broadcast and Signal sends are asynchronous, and these methods
+never block.
+
+Upon broadcasting a new value, any old unconsumed values sitting
+leftover in the receiver's channel buffers are purged first.
+
+init time:
 ~~~
-// global setup
+// everyone knows about
 tower := buzz.NewTower()
 ~~~
 
@@ -31,7 +40,7 @@ tower.Unsub("me")
 
 publish side:
 ~~~
-// publisher(s) do
+// send to all subscribers
 tower.Broadcast(val)
 
 // publishers wanting to send to one subscriber at random do
