@@ -3,6 +3,7 @@ package buzz
 import (
 	"sync"
 	"testing"
+	"time"
 )
 
 func BenchmarkCondToCond(b *testing.B) {
@@ -71,19 +72,16 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 
 	go func() {
 		// consume odd, produce even integers
-		var ival interface{}
 		var val2 int
+		ok := false
 		for {
-			select {
-			case <-reqStop:
+			val2, ok = <-oddCh
+			if !ok {
 				close(done)
-				//fmt.Printf("done with consumer loop\n")
 				return
-			case ival = <-oddCh:
-				val2 = ival.(int)
-				val2++
-				evenTower.Broadcast(val2)
 			}
+			val2++
+			evenCh <- val2
 		}
 
 	}()
@@ -93,16 +91,20 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 
 	// consume even, produce odd integers
 	val = 1
-	oddTower.Broadcast(val)
+	oddTower.sub <- val
 	for i := 0; i < b.N; i++ {
-		select {
-		case next := <-evenCh:
-			val = next.(int)
-			val++
-			oddTower.Broadcast(val)
-		}
+		val = <-evenCh
+		val++
+		oddCh <- val
 	}
 	b.StopTimer()
+	close(oddCh)
+
+	// drain
+	select {
+	case <-evenCh:
+	case <-time.After(time.Second):
+	}
 	//fmt.Printf("done with producer loop\n")
 	close(reqStop)
 	<-done

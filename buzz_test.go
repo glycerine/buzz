@@ -18,7 +18,7 @@ func TestBuzz(t *testing.T) {
 		// ok, good.
 	}
 
-	aligator := "bill"
+	aligator := 123
 	z.Broadcast(aligator)
 
 	select {
@@ -40,7 +40,7 @@ func TestBuzz(t *testing.T) {
 	}
 
 	// multiple Set are fine:
-	crocadile := "lyle"
+	crocadile := 456
 	z.Broadcast(crocadile)
 
 	select {
