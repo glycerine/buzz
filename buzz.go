@@ -28,7 +28,7 @@ package buzz
 import (
 	"fmt"
 	"sync"
-	//"sync/atomic"
+	"sync/atomic"
 )
 
 // AsyncTower is an 1:M non-blocking value-loadable channel.
@@ -39,14 +39,19 @@ import (
 // Sends don't block, as subscribers are given buffered channels.
 //
 type AsyncTower struct {
-	sub    chan int
-	mut    sync.Mutex
-	closed bool
+	sub       chan int
+	mut       sync.Mutex
+	closed    bool
+	hasClosed int32
+
+	reqStop chan bool
 }
 
 // NewAsyncTower makes a new AsyncTower.
 func NewAsyncTower() *AsyncTower {
-	return &AsyncTower{}
+	return &AsyncTower{
+		reqStop: make(chan bool),
+	}
 }
 
 // Subscribe returns a new channel that will receive
@@ -60,6 +65,7 @@ func (b *AsyncTower) Subscribe(name string) chan int {
 }
 
 var ErrClosed = fmt.Errorf("channel closed")
+var ErrShutdown = fmt.Errorf("channel shut down")
 
 // Broadcast sends a copy of val to all subs.
 // Any old unreceived values are purged
@@ -72,15 +78,17 @@ var ErrClosed = fmt.Errorf("channel closed")
 // receive the Broadcast value, as it is not
 // stored internally.
 //
-func (b *AsyncTower) Broadcast(val int) error {
-	b.mut.Lock()
-	if !b.closed {
-		b.mut.Unlock()
-		b.sub <- val
-		return nil
-	}
-	b.mut.Unlock()
-	return ErrClosed
+func (b *AsyncTower) Broadcast(val int) (err error) {
+	defer func() {
+		r := recover()
+		if r != nil {
+			// send on closed channel
+			//fmt.Printf("Broadcast recovered from '%#v'\n", r)
+			err = ErrClosed
+		}
+	}()
+	b.sub <- val
+	return nil
 }
 
 func (b *AsyncTower) Close() error {
@@ -90,6 +98,11 @@ func (b *AsyncTower) Close() error {
 		return ErrClosed
 	}
 	b.closed = true
+	swapped := atomic.CompareAndSwapInt32(&b.hasClosed, 0, 1)
+	if !swapped {
+		panic("logic error")
+	}
+
 	close(b.sub)
 	b.mut.Unlock()
 	return nil
@@ -113,6 +126,21 @@ BenchmarkAsyncTowerToTower-4   	 3000000	       451 ns/op	  17.73 MB/s
 BenchmarkSyncTowerToTower-4    	 5000000	       433 ns/op	  18.46 MB/s
 
 add don't send on closed protection
+
+defer recover
+BenchmarkCondToCond-4          	 3000000	       467 ns/op	  17.11 MB/s
+Broadcast recovered from '"send on closed channel"'
+BenchmarkAsyncTowerToTower-4   	 3000000	       556 ns/op	  14.38 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       483 ns/op	  16.55 MB/s
+
+BenchmarkCondToCond-4          	 3000000	       474 ns/op	  16.86 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       515 ns/op	  15.53 MB/s
+BenchmarkSyncTowerToTower-4    	 5000000	       480 ns/op	  16.66 MB/s
+
+defer recover in Async, not in sync
+BenchmarkCondToCond-4          	 3000000	       474 ns/op	  16.86 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       515 ns/op	  15.53 MB/s
+BenchmarkSyncTowerToTower-4    	 5000000	       480 ns/op	  16.66 MB/s
 
 
 */

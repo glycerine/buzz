@@ -227,5 +227,15 @@ BenchmarkCondToCond-4          	 3000000	       483 ns/op	  16.53 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       441 ns/op	  18.11 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       486 ns/op	  16.43 MB/s
 
+async has select but just one case
+BenchmarkCondToCond-4          	 3000000	       479 ns/op	  16.68 MB/s
+BenchmarkAsyncTowerToTower-4   	 5000000	       478 ns/op	  16.72 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       484 ns/op	  16.52 MB/s
+
+async has select with 2nd channel in it
+BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.91 MB/s
+BenchmarkAsyncTowerToTower-4   	 2000000	       646 ns/op	  12.38 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       447 ns/op	  17.88 MB/s
+
 
 */
