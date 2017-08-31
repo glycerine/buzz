@@ -9,7 +9,7 @@ import (
 func Example() {
 
 	b := buzz.NewAsyncTower()
-	ch := b.Subscribe("me")
+	ch := b.Subscribe()
 	go func() {
 		for {
 			select {

@@ -8,8 +8,8 @@ import (
 func TestBuzz(t *testing.T) {
 
 	z := buzz.NewAsyncTower()
-	buzzCh := z.Subscribe("me")
-	buzzCh2 := z.Subscribe("you")
+	buzzCh := z.Subscribe()
+	buzzCh2 := z.Subscribe()
 
 	select {
 	case <-buzzCh:

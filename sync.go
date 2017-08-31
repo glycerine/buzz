@@ -2,7 +2,6 @@ package buzz
 
 import (
 	"sync"
-	"sync/atomic"
 )
 
 // SyncTower is an 1:M non-blocking value-loadable channel.
@@ -13,10 +12,9 @@ import (
 // Sends don't block, as subscribers are given buffered channels.
 //
 type SyncTower struct {
-	sub       chan int
-	mut       sync.Mutex
-	closed    bool
-	hasClosed int32
+	subs   []chan int
+	mut    sync.Mutex
+	closed bool
 
 	reqStop chan bool
 }
@@ -33,7 +31,7 @@ func NewSyncTower() *SyncTower {
 func (b *SyncTower) Subscribe(name string) chan int {
 	b.mut.Lock()
 	ch := make(chan int, 1)
-	b.sub = ch
+	b.subs = append(b.subs, ch)
 	b.mut.Unlock()
 	return ch
 }
@@ -50,17 +48,9 @@ func (b *SyncTower) Subscribe(name string) chan int {
 // stored internally.
 //
 func (b *SyncTower) Broadcast(val int) {
-	/*
-		defer func() {
-			r := recover()
-			if r != nil {
-				// send on closed channel
-				//fmt.Printf("Broadcast recovered from '%#v'\n", r)
-				err = ErrClosed
-			}
-		}()
-	*/
-	b.sub <- val
+	for i := range b.subs {
+		b.subs[i] <- val // race here, with the close. duh. on purpose.
+	}
 }
 
 func (b *SyncTower) Close() error {
@@ -70,19 +60,19 @@ func (b *SyncTower) Close() error {
 		return ErrClosed
 	}
 	b.closed = true
-	swapped := atomic.CompareAndSwapInt32(&b.hasClosed, 0, 1)
-	if !swapped {
-		panic("logic error")
-	}
 
-	close(b.sub)
+	for i := range b.subs {
+		close(b.subs[i]) // race here, expected.
+	}
 	b.mut.Unlock()
 	return nil
 }
 
 func (b *SyncTower) Clear() {
-	select {
-	case <-b.sub:
-	default:
+	for i := range b.subs {
+		select {
+		case <-b.subs[i]:
+		default:
+		}
 	}
 }

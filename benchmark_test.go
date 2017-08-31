@@ -1,7 +1,7 @@
 package buzz
 
 import (
-	//"fmt"
+	"fmt"
 	"sync"
 	"testing"
 	//"time"
@@ -64,8 +64,8 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 	b.StopTimer()
 
 	evenTower, oddTower := NewAsyncTower(), NewAsyncTower()
-	evenCh := evenTower.Subscribe("even-consumer")
-	oddCh := oddTower.Subscribe("odd-consumer")
+	evenCh := evenTower.Subscribe()
+	oddCh := oddTower.Subscribe()
 
 	var val int
 	b.SetBytes(int64(8))
@@ -76,7 +76,7 @@ func BenchmarkAsyncTowerToTower(b *testing.B) {
 			r := recover()
 			if r != nil {
 				// send on closed channel
-				//fmt.Printf("Broadcast recovered from '%#v'\n", r)
+				fmt.Printf("Broadcast recovered from '%#v'\n", r)
 				close(done)
 			}
 		}()
@@ -176,7 +176,8 @@ func BenchmarkSyncTowerToTower(b *testing.B) {
 
 	// consume even, produce odd integers
 	val = 1
-	oddTower.sub <- val
+	//oddTower.subs[0] <- val
+	oddTower.Broadcast(val)
 	ok := false
 	for i := 0; i < b.N; i++ {
 		val, ok = <-evenCh
@@ -272,6 +273,17 @@ BenchmarkSyncTowerToTower-4    	 3000000	       423 ns/op	  18.88 MB/s
 BenchmarkCondToCond-4          	 3000000	       454 ns/op	  17.59 MB/s
 BenchmarkAsyncTowerToTower-4   	 3000000	       426 ns/op	  18.78 MB/s
 BenchmarkSyncTowerToTower-4    	 3000000	       420 ns/op	  19.03 MB/s
+
+
+## slice on both Async and Sync, before going back to Broadcast() wrapper around raw chan send.
+BenchmarkCondToCond-4          	 3000000	       457 ns/op	  17.48 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       439 ns/op	  18.20 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       431 ns/op	  18.56 MB/s
+
+with wrapper
+BenchmarkCondToCond-4          	 3000000	       459 ns/op	  17.41 MB/s
+BenchmarkAsyncTowerToTower-4   	 3000000	       425 ns/op	  18.81 MB/s
+BenchmarkSyncTowerToTower-4    	 3000000	       425 ns/op	  18.80 MB/s
 
 
 */

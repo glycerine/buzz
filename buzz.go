@@ -27,8 +27,8 @@ package buzz
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
-	//"sync/atomic"
 )
 
 // AsyncTower is an 1:M non-blocking value-loadable channel.
@@ -40,7 +40,6 @@ import (
 //
 type AsyncTower struct {
 	subs      []chan int
-	one       chan int
 	mut       sync.Mutex
 	closed    bool
 	hasClosed int32
@@ -57,13 +56,31 @@ func NewAsyncTower() *AsyncTower {
 
 // Subscribe returns a new channel that will receive
 // all Broadcast values.
-func (b *AsyncTower) Subscribe(name string) chan int {
+func (b *AsyncTower) Subscribe() chan int {
 	b.mut.Lock()
 	ch := make(chan int, 1)
 	b.subs = append(b.subs, ch)
-	b.one = ch
 	b.mut.Unlock()
 	return ch
+}
+
+func (b *AsyncTower) Unsub(x chan int) {
+	b.mut.Lock()
+	// find it
+	k := -1
+	for i := range b.subs {
+		if b.subs[i] == x {
+			k = i
+			break
+		}
+	}
+	if k == -1 {
+		// not found
+		return
+	}
+	// found. delete it
+	b.subs = append(b.subs[:k], b.subs[k+1:]...)
+	b.mut.Unlock()
 }
 
 var ErrClosed = fmt.Errorf("channel closed")
@@ -83,20 +100,13 @@ var ErrShutdown = fmt.Errorf("channel shut down")
 func (b *AsyncTower) Broadcast(val int) {
 	for i := range b.subs {
 		b.subs[i] <- val // race here, with the close. duh. on purpose.
-		/* 5% faster
-							BenchmarkCondToCond-4          	 3000000	       473 ns/op	  16.91 MB/s
-							BenchmarkAsyncTowerToTower-4   	 3000000	       412 ns/op	  19.40 MB/s
-							BenchmarkSyncTowerToTower-4    	 3000000	       418 ns/op	  19.12 MB/s
-
-				BenchmarkCondToCond-4          	 3000000	       459 ns/op	  17.41 MB/s
-				BenchmarkAsyncTowerToTower-4   	 3000000	       439 ns/op	  18.18 MB/s
-				BenchmarkSyncTowerToTower-4    	 3000000	       424 ns/op	  18.85 MB/s
-
-		BenchmarkCondToCond-4          	 3000000	       456 ns/op	  17.54 MB/s
-		BenchmarkAsyncTowerToTower-4   	 3000000	       423 ns/op	  18.88 MB/s
-		BenchmarkSyncTowerToTower-4    	 3000000	       421 ns/op	  18.97 MB/s
-		*/
 	}
+}
+
+func (b *AsyncTower) Signal(val int) {
+	n := len(b.subs)
+	i := rand.Intn(n)
+	b.subs[i] <- val // race here, with the close. duh. on purpose.
 }
 
 func (b *AsyncTower) Close() error {
